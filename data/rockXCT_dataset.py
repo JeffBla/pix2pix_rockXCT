@@ -9,7 +9,7 @@ You need to implement the following functions:
     -- <__len__>: Return the number of images.
 """
 import os
-from data.base_dataset import BaseDataset
+from data.base_dataset import BaseDataset, get_transform
 from data.image_folder import make_dataset
 from pydicom import dcmread
 import numpy as np
@@ -21,6 +21,23 @@ class RockXCTDataset(BaseDataset):
     It assumes that the directory '/path/to/data/train' contains image pairs in the form of {A,B}.
     During test time, you need to prepare a directory '/path/to/data/test'.
     """
+    @staticmethod
+    def modify_commandline_options(parser, is_train):
+        import argparse
+        """Add new dataset-specific options, and rewrite default values for existing options.
+
+        Parameters:
+            parser          -- original option parser
+            is_train (bool) -- whether training phase or test phase. You can use this flag to add training-specific or test-specific options.
+
+        Returns:
+            the modified parser.
+        """
+        parser.add_argument(
+            '--gray',
+            action=argparse.BooleanOptionalAction,
+            help='fake the image as a gray image.')
+        return parser
 
     def __init__(self, opt):
         """Initialize this dataset class.
@@ -53,11 +70,19 @@ class RockXCTDataset(BaseDataset):
         px_arr = np.array(ds.pixel_array)
         # CT value
         AB_Hu = px_arr * ds.RescaleSlope + ds.RescaleIntercept
+        AB_Hu = AB_Hu[np.newaxis,:,:]
         # split AB image into A and B
         w, h = AB_Hu.size
         w2 = int(w / 2)
         A = AB_Hu.crop((0, 0, w2, h))
         B = AB_Hu.crop((w2, 0, w, h))
+
+        # apply the same transform to both A and B
+        A_transform = get_transform(self.opt)
+        B_transform = get_transform(self.opt)
+
+        A = A_transform(A)
+        B = B_transform(B)
 
         return {'A': A, 'B': B, 'A_paths': AB_path, 'B_paths': AB_path}
 
