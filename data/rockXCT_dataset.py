@@ -23,7 +23,6 @@ class RockXCTDataset(BaseDataset):
     """
     @staticmethod
     def modify_commandline_options(parser, is_train):
-        import argparse
         """Add new dataset-specific options, and rewrite default values for existing options.
 
         Parameters:
@@ -35,7 +34,7 @@ class RockXCTDataset(BaseDataset):
         """
         parser.add_argument(
             '--gray',
-            action=argparse.BooleanOptionalAction,
+            action='store_true',
             help='fake the image as a gray image.')
         return parser
 
