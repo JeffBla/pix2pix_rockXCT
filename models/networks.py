@@ -1,3 +1,6 @@
+import sys
+sys.path.append('/home/jeffbla/pytorch-CycleGAN-and-pix2pix/models')
+
 import torch
 import torch.nn as nn
 from torch.nn import init
@@ -194,6 +197,8 @@ def define_G_percent(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=F
         net = UnetGenerator_percent(input_nc, output_nc, 7, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
     elif netG == 'unet_256':
         net = UnetGenerator_percent(input_nc, output_nc, 8, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
+    elif netG == 'unet_512':
+        net = UnetGenerator_percent(input_nc, output_nc, 9, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
     
@@ -522,7 +527,7 @@ class UnetGenerator_percent(nn.Module):
         We construct the U-Net from the innermost layer to the outermost layer.
         It is a recursive process.
         """
-        super(UnetGenerator, self).__init__()
+        super(UnetGenerator_percent, self).__init__()
         # construct unet structure
         unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8, input_nc=None, submodule=None, norm_layer=norm_layer, innermost=True)  # add the innermost layer
         for i in range(num_downs - 5):          # add intermediate layers with ngf * 8 filters
@@ -533,7 +538,7 @@ class UnetGenerator_percent(nn.Module):
         unet_block = UnetSkipConnectionBlock(ngf, ngf * 2, input_nc=None, submodule=unet_block, norm_layer=norm_layer)
         self.model = UnetSkipConnectionBlock(output_nc, ngf, input_nc=input_nc, submodule=unet_block, outermost=True, norm_layer=norm_layer)  # add the outermost layer
         
-        from percentlayer import PercentLayer
+        from .percentlayer import PercentLayer
         # turn percentage to ct
         self.percentLayer = PercentLayer()
 
@@ -691,3 +696,4 @@ class PixelDiscriminator(nn.Module):
     def forward(self, input):
         """Standard forward."""
         return self.net(input)
+
