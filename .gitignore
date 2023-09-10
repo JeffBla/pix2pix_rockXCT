@@ -48,4 +48,4 @@ percentOutput/*_np
 wandb/
 
 # ignore html
-percentOutput/visualize.html
+percentOutput/visual.html

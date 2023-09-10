@@ -162,7 +162,7 @@ def define_G(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, in
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
     return init_net(net, init_type, init_gain, gpu_ids)
 
-def define_G_percent(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, init_type='normal', init_gain=0.02, gpu_ids=[]):
+def define_G_percent(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=False, init_type='normal', init_gain=0.02, gpu_ids=[], solid_ct= 2232.875, water_ct=0,air_ct=-1000):
     """Create a generator that guess the percentage
 
     Parameters:
@@ -194,11 +194,11 @@ def define_G_percent(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=F
 
     
     if netG == 'unet_128':
-        net = UnetGenerator_percent(input_nc, output_nc, 7, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
+        net = UnetGenerator_percent(input_nc, output_nc, 7, ngf, norm_layer=norm_layer, use_dropout=use_dropout, solid_ct=solid_ct, water_ct=water_ct, air_ct=air_ct)
     elif netG == 'unet_256':
-        net = UnetGenerator_percent(input_nc, output_nc, 8, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
+        net = UnetGenerator_percent(input_nc, output_nc, 8, ngf, norm_layer=norm_layer, use_dropout=use_dropout, solid_ct=solid_ct, water_ct=water_ct, air_ct=air_ct)
     elif netG == 'unet_512':
-        net = UnetGenerator_percent(input_nc, output_nc, 9, ngf, norm_layer=norm_layer, use_dropout=use_dropout)
+        net = UnetGenerator_percent(input_nc, output_nc, 9, ngf, norm_layer=norm_layer, use_dropout=use_dropout, solid_ct=solid_ct, water_ct=water_ct, air_ct=air_ct)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
     
@@ -514,7 +514,7 @@ class UnetGenerator(nn.Module):
 class UnetGenerator_percent(nn.Module):
     """Create a Unet-based generator"""
 
-    def __init__(self, input_nc, output_nc, num_downs, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False):
+    def __init__(self, input_nc, output_nc, num_downs, ngf=64, norm_layer=nn.BatchNorm2d, use_dropout=False, solid_ct=2232.875, water_ct=0, air_ct=-1000):
         """Construct a Unet generator
         Parameters:
             input_nc (int)  -- the number of channels in input images
@@ -540,7 +540,7 @@ class UnetGenerator_percent(nn.Module):
         
         from .percentlayer import PercentLayer
         # turn percentage to ct
-        self.percentLayer = PercentLayer()
+        self.percentLayer = PercentLayer(solid_ct, water_ct, air_ct)
 
     def forward(self, input):
         """Standard forward"""

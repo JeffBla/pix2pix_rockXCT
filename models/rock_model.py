@@ -30,6 +30,10 @@ class RockModel(BaseModel):
         """
         # changing the default values to match the pix2pix paper (https://phillipi.github.io/pix2pix/)
         parser.set_defaults(norm='batch', netG='unet_256', dataset_mode='aligned')
+        parser.add_argument('--solid_ct', type=float, default=2232.875, help='the ct value of dry rock')
+        parser.add_argument('--water_ct', type=float, default=0, help='the ct value of pure water')
+        parser.add_argument('--air_ct', type=float, default=-1000, help='the ct value of pure air')
+
         if is_train:
             parser.set_defaults(pool_size=0, gan_mode='vanilla')
             parser.add_argument('--lambda_L1', type=float, default=100.0, help='weight for L1 loss')
@@ -54,7 +58,7 @@ class RockModel(BaseModel):
             self.model_names = ['G']
         # define networks (both generator and discriminator)
         self.netG = networks.define_G_percent(opt.input_nc, opt.output_nc, opt.ngf, opt.netG, opt.norm,
-                                      not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids)
+                                      not opt.no_dropout, opt.init_type, opt.init_gain, self.gpu_ids, opt.solid_ct, opt.water_ct, opt.air_ct)
 
         if self.isTrain:  # define a discriminator; conditional GANs need to take both input and output images; Therefore, #channels for D is input_nc + output_nc
             self.netD = networks.define_D(opt.input_nc + 1, opt.ndf, opt.netD,
