@@ -42,6 +42,10 @@ test/.coverage
 test/data/legacy_serialized.pt
 *~
 .idea
+percentOutput/*_np
 
 #Ignore Wandb
 wandb/
+
+# ignore html
+percentOutput/visualize.html

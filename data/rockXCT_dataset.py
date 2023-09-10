@@ -15,7 +15,6 @@ from pydicom import dcmread
 import numpy as np
 import torch
 
-# no use
 def batch_height_widthRescale(imagePlusOneDim: torch.Tensor) -> torch.Tensor:
     output = imagePlusOneDim.view(imagePlusOneDim.shape[0], -1)
     output -= output.min(1, keepdim=True)[0]
@@ -78,6 +77,7 @@ class RockXCTDataset(BaseDataset):
         # CT value
         AB_Hu = px_arr * ds.RescaleSlope + ds.RescaleIntercept
         AB_Hu = torch.tensor(AB_Hu, dtype=torch.float).unsqueeze(0)
+        AB_Hu = batch_height_widthRescale(AB_Hu)
         # split AB image into A and B
         w = AB_Hu.shape[2]
         w2 = int(w / 2)

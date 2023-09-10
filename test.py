@@ -27,11 +27,17 @@ See training and test tips at: https://github.com/junyanz/pytorch-CycleGAN-and-p
 See frequently asked questions at: https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/master/docs/qa.md
 """
 import os
+import sys
+import numpy as np
+import torch
+
 from options.test_options import TestOptions
 from data import create_dataset
 from models import create_model
 from util.visualizer import save_images
 from util import html
+
+from models.percentlayer import PercentLayer
 
 try:
     import wandb
@@ -67,6 +73,21 @@ if __name__ == '__main__':
     # For [CycleGAN]: It should not affect CycleGAN as CycleGAN uses instancenorm without dropout.
     if opt.eval:
         model.eval()
+
+    # set hook
+    # extract percent
+    features = []
+    def hookForPercentLayerInput(module, input, output):
+        features.append(input[0].clone().detach())
+
+
+    genModules = dict(getattr(model, 'netG').named_modules())
+    percentLayerInGen = list(
+        filter(lambda c: True if isinstance(c, PercentLayer) else False,
+            genModules.values()))[0]
+    handel = percentLayerInGen.register_forward_hook(hookForPercentLayerInput)
+
+
     for i, data in enumerate(dataset):
         if i >= opt.num_test:  # only apply our model to opt.num_test images.
             break
@@ -77,4 +98,18 @@ if __name__ == '__main__':
         if i % 5 == 0:  # save images to an HTML file
             print('processing (%04d)-th image... %s' % (i, img_path))
         save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize, use_wandb=opt.use_wandb)
+ 
+        # save percent info and image for plotly visualizing
+        percents = torch.softmax(features[0], 1)
+        percents_np = percents.view(percents.shape[0], 3, -1).detach().cpu().numpy()
+        for j in range(percents_np.shape[0]):
+            target = percents_np[j]
+            target = np.array(list(zip(target[0], target[1], target[2])))
+
+            np.save(f'./percentOutput/percent_np/percent_{i}_{j}.npy', target)
+        np.save(f'./percentOutput/image_np/img_{i}_{j}.npy', visuals['fake_B'].detach().cpu().numpy())
+
+
     webpage.save()  # save the HTML
+
+    handel.remove()
