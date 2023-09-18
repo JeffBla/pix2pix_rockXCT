@@ -113,3 +113,6 @@ if __name__ == '__main__':
     webpage.save()  # save the HTML
 
     handel.remove()
+
+    from percentOutput.visualize import plotly_visual 
+    plotly_visual(opt.solid_ct, opt.water_ct, opt.air_ct)

@@ -110,7 +110,7 @@ def get_transform(opt, params=None, grayscale=False, method=transforms.Interpola
         else:
             transform_list += [transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
 
-    if opt.isDcm:
+    if opt.isnorm:
         transform_list += [transforms.Normalize((0.5,), (0.5,))]
     return transforms.Compose(transform_list)
 

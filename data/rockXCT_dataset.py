@@ -15,13 +15,8 @@ from pydicom import dcmread
 import numpy as np
 import torch
 
-def batch_height_widthRescale(imagePlusOneDim: torch.Tensor) -> torch.Tensor:
-    output = imagePlusOneDim.view(imagePlusOneDim.shape[0], -1)
-    output -= output.min(1, keepdim=True)[0]
-    output /= output.max(1, keepdim=True)[0]
-    output = output.view(imagePlusOneDim.shape[0], imagePlusOneDim.shape[1],
-                        imagePlusOneDim.shape[2])
-    return output
+def Rescale0_1(imagePlusOneDim: torch.Tensor, CTG:float, WATER:float, AIR:float) -> torch.Tensor:
+    return (imagePlusOneDim - AIR)/(CTG-AIR)
 class RockXCTDataset(BaseDataset):
     """A dataset class for paired image dataset.
 
@@ -40,7 +35,7 @@ class RockXCTDataset(BaseDataset):
             the modified parser.
         """
         parser.add_argument(
-            '--isDcm',
+            '--isnorm',
             action='store_true',
             help='check whther the dataset is dcm files')
         return parser
@@ -56,6 +51,10 @@ class RockXCTDataset(BaseDataset):
         self.AB_paths = sorted(make_dataset(self.dir_AB, opt.max_dataset_size))  # get image paths
         self.input_nc = self.opt.output_nc if self.opt.direction == 'BtoA' else self.opt.input_nc
         self.output_nc = self.opt.input_nc if self.opt.direction == 'BtoA' else self.opt.output_nc
+
+        self.solid_ct = opt.solid_ct
+        self.water_ct = opt.water_ct
+        self.air_ct = opt.air_ct
 
     def __getitem__(self, index):
         """Return a data point and its metadata information.
@@ -77,7 +76,7 @@ class RockXCTDataset(BaseDataset):
         # CT value
         AB_Hu = px_arr * ds.RescaleSlope + ds.RescaleIntercept
         AB_Hu = torch.tensor(AB_Hu, dtype=torch.float).unsqueeze(0)
-        AB_Hu = batch_height_widthRescale(AB_Hu)
+        AB_Hu = Rescale0_1(AB_Hu, self.solid_ct, self.water_ct, self.air_ct)
         # split AB image into A and B
         w = AB_Hu.shape[2]
         w2 = int(w / 2)
