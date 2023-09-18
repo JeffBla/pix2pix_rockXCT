@@ -3,6 +3,7 @@
 debug*
 datasets/
 checkpoints/
+checkpoints2/
 results/
 build/
 dist/
