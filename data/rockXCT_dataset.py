@@ -16,7 +16,7 @@ import numpy as np
 import torch
 
 def Rescale0_1(imagePlusOneDim: torch.Tensor, CTG:float, WATER:float, AIR:float) -> torch.Tensor:
-    return (imagePlusOneDim - AIR)/(CTG-AIR)
+    return (imagePlusOneDim - AIR)/(3000-AIR)
 
 class RockXCTDataset(BaseDataset):
     """A dataset class for paired image dataset.
@@ -92,7 +92,7 @@ class RockXCTDataset(BaseDataset):
         # A = A_transform(A)
         # B = B_transform(B)
 
-        # # rescale to -1 ~ 1
+        # rescale to -1 ~ 1
         A = 2 * A - 1
         B = 2 * B - 1
 
