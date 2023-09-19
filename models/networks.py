@@ -7,6 +7,7 @@ from torch.nn import init
 import functools
 from torch.optim import lr_scheduler
 
+from .unet_model import UNet
 
 ###############################################################################
 # Helper Functions
@@ -192,13 +193,18 @@ def define_G_percent(input_nc, output_nc, ngf, netG, norm='batch', use_dropout=F
     net = None
     norm_layer = get_norm_layer(norm_type=norm)
 
-    
-    if netG == 'unet_128':
+    if netG == 'resnet_9blocks':
+        net = ResnetGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9)
+    elif netG == 'resnet_6blocks':
+        net = ResnetGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=6)
+    elif netG == 'unet_128':
         net = UnetGenerator_percent(input_nc, output_nc, 7, ngf, norm_layer=norm_layer, use_dropout=use_dropout, solid_ct=solid_ct, water_ct=water_ct, air_ct=air_ct)
     elif netG == 'unet_256':
         net = UnetGenerator_percent(input_nc, output_nc, 8, ngf, norm_layer=norm_layer, use_dropout=use_dropout, solid_ct=solid_ct, water_ct=water_ct, air_ct=air_ct)
     elif netG == 'unet_512':
         net = UnetGenerator_percent(input_nc, output_nc, 9, ngf, norm_layer=norm_layer, use_dropout=use_dropout, solid_ct=solid_ct, water_ct=water_ct, air_ct=air_ct)
+    elif netG == 'unet_original':
+        net = UNet(input_nc, output_nc, solid_ct=solid_ct, water_ct=water_ct, air_ct=air_ct)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % netG)
     
