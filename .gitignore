@@ -50,3 +50,8 @@ wandb/
 
 # ignore html
 percentOutput/visual.html
+
+# npm package for commitizen
+package.json
+node_modules
+package-lock.json
