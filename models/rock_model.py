@@ -102,6 +102,8 @@ class RockModel(BaseModel):
         pred_real = self.netD(real_AB)
         self.loss_D_real = self.criterionGAN(pred_real, True)
         # combine loss and calculate gradients
+        # divide the objective by 2 while optimizing D, which slows down the rate at
+        # which D learns relative to G.
         self.loss_D = (self.loss_D_fake + self.loss_D_real) * 0.5
         self.loss_D.backward()
 

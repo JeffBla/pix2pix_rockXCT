@@ -17,6 +17,7 @@ import torch
 
 def Rescale0_1(imagePlusOneDim: torch.Tensor, CTG:float, WATER:float, AIR:float) -> torch.Tensor:
     return (imagePlusOneDim - AIR)/(CTG-AIR)
+
 class RockXCTDataset(BaseDataset):
     """A dataset class for paired image dataset.
 
@@ -83,12 +84,17 @@ class RockXCTDataset(BaseDataset):
         A = AB_Hu[:,:,:w2]
         B = AB_Hu[:,:,w2:]
 
+        # the behavior of normalize to gaussian distribution is weird
         # apply the same transform to both A and B
-        A_transform = get_transform(self.opt, convert=False)
-        B_transform = get_transform(self.opt, convert=False)
+        # A_transform = get_transform(self.opt, convert=False)
+        # B_transform = get_transform(self.opt, convert=False)
 
-        A = A_transform(A)
-        B = B_transform(B)
+        # A = A_transform(A)
+        # B = B_transform(B)
+
+        # # rescale to -1 ~ 1
+        A = 2 * A - 1
+        B = 2 * B - 1
 
         return {'A': A, 'B': B, 'A_paths': AB_path, 'B_paths': AB_path}
 
