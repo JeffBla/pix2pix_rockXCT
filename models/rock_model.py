@@ -89,7 +89,7 @@ class RockModel(BaseModel):
 
     def forward(self):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
-        self.fake_B = self.netG(self.real_A)  # G(A)
+        self.fake_B, self.percent = self.netG(self.real_A)  # G(A)
 
     def backward_D(self):
         """Calculate GAN loss for the discriminator"""

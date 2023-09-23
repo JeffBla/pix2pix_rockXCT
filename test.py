@@ -30,6 +30,7 @@ import os
 import sys
 import numpy as np
 import torch
+import cv2 as cv
 
 from options.test_options import TestOptions
 from data import create_dataset
@@ -38,6 +39,21 @@ from util.visualizer import save_images
 from util import html
 
 from models.percentlayer import PercentLayer
+
+def rescale2rgb(target):
+    # rescale original to 8 bit values [0,255]
+    x0 = np.min(target)
+    x1 = np.max(target)
+    y0 = 0
+    y1 = 255.0
+    i8 = ((target - x0) * ((y1 - y0) / (x1 - x0))) + y0
+
+    # # create new array with rescaled values and unsigned 8 bit data type
+    o8 = i8.astype(np.uint8)
+
+    # calculate porosity
+    img = cv.medianBlur(o8, 5)
+    return img
 
 try:
     import wandb
@@ -74,20 +90,6 @@ if __name__ == '__main__':
     if opt.eval:
         model.eval()
 
-    # set hook
-    # extract percent
-    features = []
-    def hookForPercentLayerInput(module, input, output):
-        features.append(input[0].clone().detach())
-
-
-    genModules = dict(getattr(model, 'netG').named_modules())
-    percentLayerInGen = list(
-        filter(lambda c: True if isinstance(c, PercentLayer) else False,
-            genModules.values()))[0]
-    handel = percentLayerInGen.register_forward_hook(hookForPercentLayerInput)
-
-
     for i, data in enumerate(dataset):
         if i >= opt.num_test:  # only apply our model to opt.num_test images.
             break
@@ -98,21 +100,53 @@ if __name__ == '__main__':
         if i % 5 == 0:  # save images to an HTML file
             print('processing (%04d)-th image... %s' % (i, img_path))
         save_images(webpage, visuals, img_path, aspect_ratio=opt.aspect_ratio, width=opt.display_winsize, use_wandb=opt.use_wandb)
- 
-        # save percent info and image for plotly visualizing
-        percents = torch.softmax(features[0], 1)
-        percents_np = percents.view(percents.shape[0], 3, -1).detach().cpu().numpy()
-        for j in range(percents_np.shape[0]):
-            target = percents_np[j]
+        
+        percents = model.percent.clone().detach().squeeze()
+        fake_img = visuals['fake_B'].detach().cpu().numpy()
+        
+        # img process for calculate
+        img= rescale2rgb(fake_img[0,0])
+        cimg = cv.cvtColor(img, cv.COLOR_GRAY2BGR)
+
+
+         # area finding
+        # Threshold the image to create a binary image
+        ret, thresh = cv.threshold(img, 100, 255, cv.THRESH_BINARY)
+        contours, hierarchy = cv.findContours(thresh, 2, 1)
+
+        cnt = contours
+        big_contour = []
+        max = 0
+        for i in cnt:
+            area = cv.contourArea(
+                i)  #--- find the contour having biggest area ---
+            if (area > max):
+                max = area
+                big_contour = i
+        
+        solid_percent = percents[0].cpu().numpy()
+        spercent_list = np.array([])
+        for idx, j in np.ndenumerate(solid_percent):
+            if (cv.pointPolygonTest(big_contour,(idx[1], idx[0]), False) > 0):
+                spercent_list = np.append(spercent_list, 1-solid_percent[idx[0], idx[1]])
+        porosity = spercent_list.sum() / spercent_list.size
+        print(f"porosity >>>> {porosity}")
+        ###### DEBUG #####
+        # cv.drawContours(cimg, big_contour, -1, (0, 255, 0), 2)
+        # cv.imwrite('test.jpg', cimg)
+
+        if opt.visual:
+            # save percent info and image for plotly visualizing
+            percents_np = percents.view(percents.shape[0], 3, -1).detach().cpu().numpy()
+            target = percents_np[0]
             target = np.array(list(zip(target[0], target[1], target[2])))
 
-            np.save(f'./percentOutput/percent_np/percent_{i}_{j}.npy', target)
-        np.save(f'./percentOutput/image_np/img_{i}_{j}.npy', visuals['fake_B'].detach().cpu().numpy())
+            np.save(f'./percentOutput/percent_np/percent_{i}.npy', target)
+            np.save(f'./percentOutput/image_np/img_{i}.npy', fake_img)
 
 
     webpage.save()  # save the HTML
 
-    handel.remove()
-
-    from percentOutput.visualize import plotly_visual 
-    plotly_visual(opt.solid_ct, opt.water_ct, opt.air_ct)
+    if opt.visual:
+        from percentOutput.visualize import plotly_visual 
+        plotly_visual(opt.solid_ct, opt.water_ct, opt.air_ct)

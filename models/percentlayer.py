@@ -20,4 +20,4 @@ class PercentLayer(nn.Module):
         
         # tanh = nn.Tanh()
         # output = tanh(x)  # add a non-linear function
-        return rescale
+        return rescale, x
