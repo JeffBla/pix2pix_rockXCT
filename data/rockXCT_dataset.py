@@ -39,6 +39,11 @@ class RockXCTDataset(BaseDataset):
             '--isnorm',
             action='store_true',
             help='check whther the dataset is dcm files')
+        parser.add_argument(
+            '--isResetValAboveSoildCt',
+            action='store_true',
+            help='set all value higher than Solid Ct to Solid Ct'
+        )
         return parser
 
     def __init__(self, opt):
@@ -56,6 +61,8 @@ class RockXCTDataset(BaseDataset):
         self.solid_ct = opt.solid_ct
         self.water_ct = opt.water_ct
         self.air_ct = opt.air_ct
+
+        self.isResetValAboveSoildCt = opt.isResetValAboveSoildCt
 
     def __getitem__(self, index):
         """Return a data point and its metadata information.
@@ -77,7 +84,12 @@ class RockXCTDataset(BaseDataset):
         # CT value
         AB_Hu = px_arr * ds.RescaleSlope + ds.RescaleIntercept
         AB_Hu = torch.tensor(AB_Hu, dtype=torch.float).unsqueeze(0)
+
+        if (self.isResetValAboveSoildCt):
+            AB_Hu[AB_Hu>self.solid_ct] = self.solid_ct
+
         AB_Hu = Rescale0_1(AB_Hu, self.solid_ct, self.water_ct, self.air_ct)
+
         # split AB image into A and B
         w = AB_Hu.shape[2]
         w2 = int(w / 2)
