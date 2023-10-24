@@ -14,12 +14,12 @@ def plotly_visual(CTG=2232.875, W=0, AIR=-1000):
     for i in range(NUM_PERCENT):
         hovertemplate = "x: %{x} <br> y: %{y} <br> z: %{z} <br> ct: %{customdata[0]:.4f} <br> percent: %{customdata[1]:.4f},  %{customdata[2]:.4f}, %{customdata[3]:.4f}"
 
-        img = np.load(f'./percentOutput/image_np/img_{i + OFFSET}_0.npy')
+        img = np.load(f'./percentOutput/image_np/img_{i + OFFSET}.npy')
         img = img.reshape(img.shape[-2], img.shape[-1])
 
         ct = ((img + 1) / 2.0) * (3000 - AIR) + AIR
 
-        percent = np.load(f'./percentOutput/percent_np/percent_{i + OFFSET}_0.npy').reshape(
+        percent = np.load(f'./percentOutput/percent_np/percent_{i + OFFSET}.npy').reshape(
             img.shape[-2], img.shape[-1], 3)
 
         fig.add_trace(go.Heatmap(z=img,
