@@ -17,7 +17,8 @@ class TestOptions(BaseOptions):
         parser.add_argument('--num_test', type=int, default=50, help='how many test images to run')
 
         # visual
-        parser.add_argument('--visual', action='store_true', help='use eval mode during test time.')
+        parser.add_argument('--visual', action='store_true', help='visualize the image & percent')
+        parser.add_argument('--save_percent', action='store_true', help='extract the percent info')
 
         # rewrite devalue values
         parser.set_defaults(model='test')
