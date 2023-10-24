@@ -29,6 +29,7 @@ See frequently asked questions at: https://github.com/junyanz/pytorch-CycleGAN-a
 import os
 import sys
 import numpy as np
+import pandas as pd
 import torch
 import cv2 as cv
 
@@ -90,6 +91,7 @@ if __name__ == '__main__':
     if opt.eval:
         model.eval()
 
+    porosityList = np.array([])
     for i, data in enumerate(dataset):
         if i >= opt.num_test:  # only apply our model to opt.num_test images.
             break
@@ -117,33 +119,41 @@ if __name__ == '__main__':
         cnt = contours
         big_contour = []
         max = 0
-        for i in cnt:
-            area = cv.contourArea(
-                i)  #--- find the contour having biggest area ---
+        for j in cnt:
+            area = cv.contourArea(j)  #--- find the contour having biggest area ---
             if (area > max):
                 max = area
-                big_contour = i
+                big_contour = j
+        if len(big_contour) != 0:
+            solid_percent = percents[0].cpu().numpy()
+            spercent_list = np.array([])
+            for idx, j in np.ndenumerate(solid_percent):
+                if (cv.pointPolygonTest(big_contour,(idx[1], idx[0]), False) > 0):
+                    spercent_list = np.append(spercent_list, 1-solid_percent[idx[0], idx[1]])
+            porosity = spercent_list.sum() / spercent_list.size
+            print(f"Porosity >>>> {porosity}")
+        else:
+            porosity = 0
+            print("Empty")
+
         
-        solid_percent = percents[0].cpu().numpy()
-        spercent_list = np.array([])
-        for idx, j in np.ndenumerate(solid_percent):
-            if (cv.pointPolygonTest(big_contour,(idx[1], idx[0]), False) > 0):
-                spercent_list = np.append(spercent_list, 1-solid_percent[idx[0], idx[1]])
-        porosity = spercent_list.sum() / spercent_list.size
-        print(f"porosity >>>> {porosity}")
+        porosityList = np.append(porosityList, porosity)
+
         ###### DEBUG #####
         # cv.drawContours(cimg, big_contour, -1, (0, 255, 0), 2)
         # cv.imwrite('test.jpg', cimg)
 
-        if opt.visual:
+        if opt.visual or opt.save_percent:
             # save percent info and image for plotly visualizing
-            percents_np = percents.view(percents.shape[0], 3, -1).detach().cpu().numpy()
-            target = percents_np[0]
+            percents_np = percents.view(3, -1).detach().cpu().numpy()
+            target = percents_np
             target = np.array(list(zip(target[0], target[1], target[2])))
 
             np.save(f'./percentOutput/percent_np/percent_{i}.npy', target)
             np.save(f'./percentOutput/image_np/img_{i}.npy', fake_img)
 
+    df = pd.DataFrame(porosityList)
+    df.to_csv('./percentOutput/porosityTmpOutput.csv')
 
     webpage.save()  # save the HTML
 
