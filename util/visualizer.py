@@ -255,3 +255,7 @@ class Visualizer():
         print(message)  # print the message
         with open(self.log_name, "a") as log_file:
             log_file.write('%s\n' % message)  # save the message
+
+    def plot_current_ctg_wandb(self, ctg):  
+        if self.use_wandb:
+            self.wandb_run.log({'CTG':ctg})
