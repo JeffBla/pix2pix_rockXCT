@@ -4,7 +4,7 @@ from torch import nn
 class PercentLayer(nn.Module):
     def __init__(self, CTG, WATER, AIR):
         super().__init__()
-        self.CTG = nn.Parameter(torch.tensor(CTG))
+        self.CTG = CTG
         self.WATER = WATER
         self.AIR = AIR
     """3 input. 1 output"""

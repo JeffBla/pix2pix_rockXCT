@@ -13,6 +13,7 @@ from data.base_dataset import BaseDataset, get_transform
 from data.image_folder import make_dataset
 from pydicom import dcmread
 import numpy as np
+import pandas as pd
 import torch
 
 def Rescale0_1(imagePlusOneDim: torch.Tensor, CTG:float, WATER:float, AIR:float) -> torch.Tensor:
@@ -44,6 +45,9 @@ class RockXCTDataset(BaseDataset):
             action='store_true',
             help='set all value higher than Solid Ct to Solid Ct'
         )
+        parser.add_argument('--csvRefPath', type=str,
+                             default='datasets/RockXCT_fractionalPorosity/fractionalPorosity.csv',
+                               help='specify where to read the fractional porosity')
         return parser
 
     def __init__(self, opt):
@@ -58,11 +62,15 @@ class RockXCTDataset(BaseDataset):
         self.input_nc = self.opt.output_nc if self.opt.direction == 'BtoA' else self.opt.input_nc
         self.output_nc = self.opt.input_nc if self.opt.direction == 'BtoA' else self.opt.output_nc
 
+        self.csvRefPath = opt.csvRefPath;
+        self.csvPorosityRef = pd.read_csv(self.csvRefPath)
+
         self.solid_ct = opt.solid_ct
         self.water_ct = opt.water_ct
         self.air_ct = opt.air_ct
 
         self.isResetValAboveSoildCt = opt.isResetValAboveSoildCt
+        self.isTrain = opt.isTrain
 
     def __getitem__(self, index):
         """Return a data point and its metadata information.
@@ -96,19 +104,27 @@ class RockXCTDataset(BaseDataset):
         A = AB_Hu[:,:,:w2]
         B = AB_Hu[:,:,w2:]
 
-        # the behavior of normalize to gaussian distribution is weird
-        # apply the same transform to both A and B
-        # A_transform = get_transform(self.opt, convert=False)
-        # B_transform = get_transform(self.opt, convert=False)
-
-        # A = A_transform(A)
-        # B = B_transform(B)
-
         # rescale to -1 ~ 1
         A = 2 * A - 1
         B = 2 * B - 1
 
-        return {'A': A, 'B': B, 'A_paths': AB_path, 'B_paths': AB_path}
+        if self.isTrain:
+            # attach fractional porosity
+            # resolve the target by file path
+            dirname, filename = AB_path.split('/')[-2:]
+            index_fractionalPorosity = int(filename.split('.')[0])
+            core, section, group = dirname.split('_')
+            section = int(section)
+            group = int(group)
+            fractionalPorosity = self.csvPorosityRef[(self.csvPorosityRef['Core ID'] == core) & 
+                                (self.csvPorosityRef['Section (m)'] == section) & 
+                                (self.csvPorosityRef['Group'] == group)].iloc[index_fractionalPorosity]['Fractional porosity']
+            fractionalPorosity = torch.tensor(fractionalPorosity,dtype=torch.float)
+            
+            return {'A': A, 'B': B, 'A_paths': AB_path, 'B_paths': AB_path, 'fractionalPorosity':fractionalPorosity}
+        else:
+            return {'A': A, 'B': B, 'A_paths': AB_path, 'B_paths': AB_path}
+            
 
     def __len__(self):
         """Return the total number of images in the dataset."""
