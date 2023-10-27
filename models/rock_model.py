@@ -1,6 +1,7 @@
 import torch
 from .base_model import BaseModel
 from . import networks
+from util.util import targetFindingCalPorosity
 
 
 class RockModel(BaseModel):
@@ -120,9 +121,14 @@ class RockModel(BaseModel):
         self.loss_G_GAN = self.criterionGAN(pred_fake, True)
         # Second, G(A) = B
         self.loss_G_L1 = self.criterionL1(self.fake_B, self.real_B) * self.opt.lambda_L1
+
         # calcualate current fake porosity
-        hole_percent = 1-self.percent[:, 0]
-        fake_porosity = hole_percent.mean(dim= [1,2])
+        fake_porosity = []
+        for i in range(self.fake_B.shape[0]):
+            fake_porosity.append(targetFindingCalPorosity(self.fake_B[i], self.percent[i], False))
+        
+        fake_porosity = torch.tensor(fake_porosity).to(self.device)
+
         self.loss_G_L2_fractionalPorosity = self.criterionL2_fractionalPorosity(fake_porosity,
                                                 self.fractionalPorosity) * self.opt.lambda_L2_fractionalPorosity
         # combine loss and calculate gradients

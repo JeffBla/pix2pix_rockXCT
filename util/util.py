@@ -4,6 +4,7 @@ import torch
 import numpy as np
 from PIL import Image
 import os
+import cv2 as cv
 
 
 def tensor2im(input_image, imtype=np.uint8):
@@ -101,3 +102,67 @@ def mkdir(path):
     """
     if not os.path.exists(path):
         os.makedirs(path)
+
+def rescale2gray(target):
+    # rescale original to 8 bit values [0,255]
+    x0 = np.min(target)
+    x1 = np.max(target)
+    y0 = 0
+    y1 = 255.0
+    i8 = ((target - x0) * ((y1 - y0) / (x1 - x0))) + y0
+
+    # # create new array with rescaled values and unsigned 8 bit data type
+    o8 = i8.astype(np.uint8)
+
+    # calculate porosity
+    img = cv.medianBlur(o8, 5)
+    return img
+
+def targetFindingCalPorosity(target, percent, isDisplay = False):
+    '''
+        target = fake image
+    '''
+    if type(percent) == torch.Tensor:
+        percent = percent.clone().detach().cpu().numpy() 
+
+    if type(target) == torch.Tensor:
+        target = target.clone().detach().permute(1,2,0).cpu().numpy()
+    # img process for calculate
+    img= rescale2gray(target)
+
+    # area finding
+    # Threshold the image to create a binary image
+    ret, thresh = cv.threshold(img, 100, 255, cv.THRESH_BINARY)
+    contours, hierarchy = cv.findContours(thresh, 2, 1)
+
+    cnt = contours
+    big_contour = []
+    max = 0
+    for j in cnt:
+        area = cv.contourArea(j)  #--- find the contour having biggest area ---
+        if (area > max):
+            max = area
+            big_contour = j
+    if len(big_contour) != 0:
+        # create binary mask
+        height = img.shape[0]
+        width = img.shape[1]
+        # Prepare a black canvas:
+        canvas = np.zeros((height, width))
+
+        # Draw the outer circle:
+        color = (255, 255, 255)
+        cv.drawContours(canvas, big_contour, -1, color, cv.FILLED)
+
+        solid_percent = percent[0]
+        hole_percent_list = 1-solid_percent[canvas != 0]
+        porosity = hole_percent_list.mean()
+        if isDisplay:
+            print(f"Porosity >>>> {porosity}")
+    else:
+        porosity = 0
+        if isDisplay:
+            print("Empty")
+
+    return porosity
+        
